@@ -2,126 +2,50 @@
 This script handles 3D switches of all the layers in the comp.
 */
 
-function makeLayers3DOr2D(whichD) {
-	var activeComp = app.project.activeItem;
+function makeLayers3Dor2D(whichD) {
+    var activeComp = app.project.activeItem;
+    if (!activeComp || !(activeComp instanceof CompItem)) {
+        alert("No active Composition Found!");
+        return;
+    }
 
-	if (activeComp && activeComp instanceof CompItem) {
-		app.beginUndoGroup("Make All Layers 3D");
+    selectedLayers = activeComp.selectedLayers;
+    if (selectedLayers.length === 0) {
+        alert("No Layer is Selected!");
+        return;
+    }
 
-		for (var i = 1; i <= activeComp.numLayers; i++) {
-			var workingLayer = activeComp.layer(i);
-
-			if (
-				workingLayer.canSetEnabled &&
-				workingLayer.threeDLayer !== undefined
-			) {
-				if (whichD === "threeD") {
-					if (workingLayer.name.startsWith("2d_")) {
-						continue;
-					}
-					workingLayer.threeDLayer = true;
-				} else if (whichD === "twoD") {
-					if (workingLayer.name.startsWith("3d_")) {
-						continue;
-					}
-					workingLayer.threeDLayer = false;
-				}
-			}
-		}
-
-		app.endUndoGroup();
-	} else {
-		alert("No Comp Found!");
-	}
-}
-
-function renameD(whichD) {
-	var activeComp = app.project.activeItem;
-	var selectedLayers = activeComp.selectedLayers;
-
-	if (activeComp && activeComp instanceof CompItem) {
-		app.beginUndoGroup("Rename Layers");
-		if (selectedLayers.length > 0) {
-			for (var i = 0; i < selectedLayers.length; i++) {
-				if (whichD === "threeD") {
-					if (
-						!selectedLayers[i].name.startsWith("3d_") &&
-						!selectedLayers[i].name.startsWith("2d_")
-					) {
-						selectedLayers[i].name = "3d_" + selectedLayers[i].name;
-					} else if (selectedLayers[i].name.startsWith("2d_")) {
-						selectedLayers[i].name =
-							"3d_" + selectedLayers[i].name.slice(3);
-					}
-					selectedLayers[i].threeDLayer = true;
-				} else if (whichD === "twoD") {
-					if (
-						!selectedLayers[i].name.startsWith("3d_") &&
-						!selectedLayers[i].name.startsWith("2d_")
-					) {
-						selectedLayers[i].name = "2d_" + selectedLayers[i].name;
-					} else if (selectedLayers[i].name.startsWith("3d_")) {
-						selectedLayers[i].name =
-							"2d_" + selectedLayers[i].name.slice(3);
-					}
-					selectedLayers[i].threeDLayer = false;
-				}
-			}
-		} else {
-			alert("No Layer is selected!");
-		}
-		app.endUndoGroup();
-	} else {
-		alert("No active comp found!");
-	}
+    app.beginUndoGroup("Renaming Layers");
+    for(var i = 0; i < selectedLayers.length; i++) {
+        var layer = selectedLayers[i];
+        var prevName = layer.name;
+        if (prevName.indexOf("3d_") === 0 || prevName.indexOf("2d_") === 0) {
+            layer.name = whichD + prevName.slice(3);
+        }
+        else {
+            layer.name = whichD + prevName;
+        }
+        layer.threeDLayer = whichD === "3d_" ? true : false;
+    }
+    app.endUndoGroup();
 }
 
 function createUI(thisObj) {
-	var myPanel =
-		thisObj instanceof Panel
-			? thisObj
-			: new Window("palette", "Make All Layers 3D", [0, 0, 200, 60], {
-					resizeable: true,
-			  });
+    var myPanel = (thisObj instanceof Panel) ? thisObj : new Window("palette", "Dimension Switcher");
 
-	var myButtonGroup = myPanel.add("group");
-	myButtonGroup.spacing = 4;
-	myButtonGroup.margins = 0;
-	myButtonGroup.orientation = "row";
-	myButtonGroup.alignment = "left";
-	myButtonGroup.alignChildren = "center";
+    myPanel.orientation = "column";
+    myPanel.alignChildren = ["left", "top"];
 
-	myPanel.threeDButton = myButtonGroup.add("button", undefined, "All 3D");
-	myPanel.twoDButton = myButtonGroup.add("button", undefined, "All 2D");
-	myPanel.renameThreeDButton = myButtonGroup.add(
-		"button",
-		undefined,
-		"Re 3D"
-	);
-	myPanel.renameTwoDButton = myButtonGroup.add("button", undefined, "Re 2D");
+    var groupSwitch = myPanel.add("group");
+    groupSwitch.orientation = "row";
+    var btnSwitchTo3D = groupSwitch.add("button", undefined, "Make All 3D");
+    var btnSwitchTo2D = groupSwitch.add("button", undefined, "Make All 2D");
 
-	myPanel.threeDButton.onClick = function () {
-		makeLayers3DOr2D("threeD");
-	};
-	myPanel.twoDButton.onClick = function () {
-		makeLayers3DOr2D("twoD");
-	};
-	myPanel.renameThreeDButton.onClick = function () {
-		renameD("threeD");
-	};
-	myPanel.renameTwoDButton.onClick = function () {
-		renameD("twoD");
-	};
+    btnSwitchTo3D.onClick = function() { makeLayers3Dor2D("3d_")}
+    btnSwitchTo2D.onClick = function() { makeLayers3Dor2D("2d_")}
 
-	myPanel.layout.layout(true);
-	myPanel.layout.resize();
-
-	return myPanel;
+    myPanel.layout.layout(true);
+    return myPanel;
 }
 
 var myScriptPanel = createUI(this);
-
-if (myScriptPanel instanceof Window) {
-	myScriptPanel.center();
-	myScriptPanel.show();
-}
